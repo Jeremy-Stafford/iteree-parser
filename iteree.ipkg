@@ -1,0 +1,13 @@
+package iteree
+
+version = 0.1.0
+
+sourcedir = "src"
+
+depends = contrib >= 0.3
+
+modules = Text.Iteree
+        , Text.Iteree.Char
+        , Text.Iteree.Combinators
+        , Text.Iteree.Driver
+        , Text.Iteree.Types
