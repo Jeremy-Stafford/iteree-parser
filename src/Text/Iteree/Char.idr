@@ -32,11 +32,11 @@ string str = map fastPack $ listChars str $ fastUnpack str
 
 ||| Parse a decimal.
 export
-decimal : Parser Char Nat
+decimal : Num a => Parser Char a
 decimal = label "decimal" $ foldl (\acc, d => acc * 10 + (assert_total $ toNatDigit d)) 0 <$> takeWhile isDigit
   where
     partial
-    toNatDigit : Char -> Nat
+    toNatDigit : Char -> a
     toNatDigit = \case
         '0' => 0
         '1' => 1
@@ -51,11 +51,11 @@ decimal = label "decimal" $ foldl (\acc, d => acc * 10 + (assert_total $ toNatDi
 
 ||| Parse a hexadecimal.
 export
-hexadecimal : Parser Char Nat
+hexadecimal : Num a => Parser Char a
 hexadecimal = label "hex" $ foldl (\acc, d => acc * 16 + (assert_total $ toNatDigit d)) 0 <$> takeWhile isHexDigit
   where
     partial
-    toNatDigit : Char -> Nat
+    toNatDigit : Char -> a
     toNatDigit = \case
         '0' => 0
         '1' => 1
@@ -76,8 +76,7 @@ hexadecimal = label "hex" $ foldl (\acc, d => acc * 16 + (assert_total $ toNatDi
 
 ||| Parse a signed integer
 export
-signed : Parser Char Nat -> Parser Char Integer
-signed p =
-    cast <$> p
-    <|> char '+' *> (cast <$> p)
-    <|> char '-' *> (negate . cast <$> p)
+signed : Neg a => Parser Char a -> Parser Char a
+signed p = p
+    <|> char '+' *> p
+    <|> char '-' *> negate <$> p
