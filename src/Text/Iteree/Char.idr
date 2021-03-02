@@ -84,7 +84,7 @@ signed p = p
 ||| Parse a float
 export
 fractional : Fractional a => Parser Char a
-fractional = go tenth <$> decimal <* char '.' <*> takeWhile isDigit
+fractional = label "float" $ go tenth <$> decimal <* char '.' <*> takeWhile isDigit
   where
     tenth : a
     tenth = 1 / 10
