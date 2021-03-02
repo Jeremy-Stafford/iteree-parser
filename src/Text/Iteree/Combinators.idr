@@ -35,7 +35,7 @@ labels ts p =
         , next = \pos, t => mapFst (const $ e $ Just t) $ p.next pos t
         }
 
-||| Hide an error message
+||| Hide an error message.
 export
 hidden : Parser tok a -> Parser tok a
 hidden p = MkParser
@@ -103,7 +103,7 @@ export
 token1 : Eq tok => tok -> Parser tok tok
 token1 t = labels [t] $ token (t ==)
 
-||| Parse any number of tokens satisfying `pred`
+||| Parse any number of tokens satisfying `pred`.
 export
 takeWhile : (pred : tok -> Bool) -> Parser tok (List tok)
 takeWhile pred = MkParser
@@ -113,12 +113,12 @@ takeWhile pred = MkParser
         else Left $ Unexpected (Just t) neutral
     }
 
-||| Parse one or more tokens satisfying `pred`
+||| Parse one or more tokens satisfying `pred`.
 export
 takeWhile1 : (pred : tok -> Bool) -> Parser tok (List tok)
 takeWhile1 pred = nonEmpty $ takeWhile pred
 
-||| Optionally run a parser
+||| Optionally run a parser.
 export
 optional : Parser tok a -> Parser tok (Maybe a)
 optional p = Just <$> p <|> pure Nothing

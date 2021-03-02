@@ -6,12 +6,12 @@ import Data.String.Iterator
 import Text.Iteree.Combinators
 import Text.Iteree.Types
 
-||| Parse a single character
+||| Parse a single character.
 export
 char : Char -> Parser Char Char
 char = token1
 
-||| Parse a list of characters
+||| Parse a list of characters.
 listChars : String -> List Char -> Parser Char (List Char)
 listChars _ [] = MkParser
     { result = \pos => Right []
@@ -24,8 +24,8 @@ listChars str (c :: cs) = MkParser
         else Left $ unexpected1 (Just c') (Named str)
     }
 
-||| Parse a string
-||| @ expected the expected string
+||| Parse a string.
+||| @ expected the expected string.
 export
 string : (expected : String) -> Parser Char String
 string str = map fastPack $ listChars str $ fastUnpack str
@@ -74,14 +74,14 @@ export
 hexadecimal : Num a => Parser Char a
 hexadecimal = label "hex" $ foldl (\acc, d => acc * 16 + (assert_total $ toNatDigitH d)) 0 <$> takeWhile isHexDigit
 
-||| Parse a signed integer
+||| Parse a signed integer.
 export
 signed : Neg a => Parser Char a -> Parser Char a
 signed p = p
     <|> char '+' *> p
     <|> char '-' *> negate <$> p
 
-||| Parse a float
+||| Parse a float.
 export
 fractional : Fractional a => Parser Char a
 fractional = label "float" $ go tenth <$> decimal <* char '.' <*> takeWhile isDigit
