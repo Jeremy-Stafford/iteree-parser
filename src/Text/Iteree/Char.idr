@@ -30,39 +30,54 @@ export
 string : (expected : String) -> Parser Char String
 string str = map fastPack $ listChars str $ fastUnpack str
 
-{-
 ||| Parse a decimal.
 export
 decimal : Parser Char Nat
-decimal = label "decimal" $ assert_total toNat <$> takeWhile1C isDigit
+decimal = label "decimal" $ foldl (\acc, d => acc * 10 + (assert_total $ toNatDigit d)) 0 <$> takeWhile isDigit
   where
     partial
     toNatDigit : Char -> Nat
-    toNatDigit '0' = 0
-    toNatDigit '1' = 1
-    toNatDigit '2' = 2
-    toNatDigit '3' = 3
-    toNatDigit '4' = 4
-    toNatDigit '5' = 5
-    toNatDigit '6' = 6
-    toNatDigit '7' = 7
-    toNatDigit '8' = 8
-    toNatDigit '9' = 9
+    toNatDigit = \case
+        '0' => 0
+        '1' => 1
+        '2' => 2
+        '3' => 3
+        '4' => 4
+        '5' => 5
+        '6' => 6
+        '7' => 7
+        '8' => 8
+        '9' => 9
 
-    partial
-    toNatIt : Nat -> {str : String} -> (1 _ : StringIterator str) -> Nat
-    toNatIt acc {str} it = case uncons str it of
-        EOF => 0
-        Character c it' => toNatDigit c
-
-    partial
-    toNat : String -> Nat
-    toNat s = withString s (toNatIt 0)
-
+||| Parse a hexadecimal.
 export
-signedDecimal : Parser Char Integer
-signedDecimal =
-    char '-' *> (negate . cast) <$> decimal
-    <|> char '+' *> cast <$> decimal
-    <|> cast <$> decimal
--}
+hexadecimal : Parser Char Nat
+hexadecimal = label "hex" $ foldl (\acc, d => acc * 16 + (assert_total $ toNatDigit d)) 0 <$> takeWhile isHexDigit
+  where
+    partial
+    toNatDigit : Char -> Nat
+    toNatDigit = \case
+        '0' => 0
+        '1' => 1
+        '2' => 2
+        '3' => 3
+        '4' => 4
+        '5' => 5
+        '6' => 6
+        '7' => 7
+        '8' => 8
+        '9' => 9
+        'a' => 0xa
+        'b' => 0xb
+        'c' => 0xc
+        'd' => 0xd
+        'e' => 0xe
+        'f' => 0xf
+
+||| Parse a signed integer
+export
+signed : Parser Char Nat -> Parser Char Integer
+signed p =
+    cast <$> p
+    <|> char '+' *> (cast <$> p)
+    <|> char '-' *> (negate . cast <$> p)
