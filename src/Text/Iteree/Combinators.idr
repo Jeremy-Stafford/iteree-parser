@@ -117,3 +117,8 @@ takeWhile pred = MkParser
 export
 takeWhile1 : (pred : tok -> Bool) -> Parser tok (List tok)
 takeWhile1 pred = nonEmpty $ takeWhile pred
+
+||| Optionally run a parser
+export
+optional : Parser tok a -> Parser tok (Maybe a)
+optional p = Just <$> p <|> pure Nothing
