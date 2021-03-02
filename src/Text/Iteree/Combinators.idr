@@ -122,3 +122,32 @@ takeWhile1 pred = nonEmpty $ takeWhile pred
 export
 optional : Parser tok a -> Parser tok (Maybe a)
 optional p = Just <$> p <|> pure Nothing
+
+{-
+===============================================================================
+Lexers
+===============================================================================
+-}
+
+
+lex : Show tok2 => Parser tok1 tok2 -> Parser tok2 a -> Parser tok1 a
+lex lexer parser = MkParser
+    { result = mapFst mapError . parser.result
+    , next = \pos, c => case lexer.next pos c of
+        Left e => Left e
+        Right lexer' =>
+            let lex' = lex lexer' parser
+            in case lexer'.result pos of
+                Left e => Right lex'
+                Right t => case parser.next pos t of
+                    Left e => Right lex'
+                    Right parser' => Right $ lex' <|> lex lexer parser'
+    }
+  where
+    mapError : RawParseError tok2 -> RawParseError tok1
+    mapError (Unexpected t ts) =
+        Unexpected Nothing $
+            (\case
+                Token t => Named $ show t
+                Named s => Named s    
+            ) <$> ts
