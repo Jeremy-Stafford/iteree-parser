@@ -1,5 +1,7 @@
 module Text.Iteree.Types
 
+import Data.String
+
 %default total
 
 ||| The position in the source.
@@ -32,11 +34,19 @@ export
 Cast Position (Nat, Nat) where
     cast (MkPos line column) = (line, column)
 
+export
+Show Position where
+    show pos = fastConcat [show pos.line, ":", show pos.column]
+
 ||| A label for part of parsing: either a token or a name.
 public export
 data Label : (tok : Type) -> Type where
     Token : tok -> Label tok
     Named : String -> Label tok
+
+prettyLabel : Show tok => Label tok -> String
+prettyLabel (Token tok) = show tok
+prettyLabel (Named name) = name
 
 ||| An error occuring during parsing.
 public export
@@ -59,12 +69,35 @@ export
 Semigroup (RawParseError tok) where
     Unexpected t s1 <+> Unexpected _ s2 = Unexpected t (s1 <+> s2)
 
+prettyRawParseError : Show tok => RawParseError tok -> String
+prettyRawParseError (Unexpected t lbls) =
+    let prettyT = case t of
+            Just t' => "token " <+> show t'
+            Nothing => "end of file"
+        prettyLbls = case lbls of
+            [] => []
+            (lbl :: lbls') => "; expected " :: prettyLabel lbl :: map (\lbl' => ", " <+> prettyLabel lbl') lbls'
+    in fastConcat $
+        "unexpected "
+            :: prettyT
+            :: prettyLbls
+
 ||| A parse error equipped with position information.
 public export
 record ParseError tok where
     constructor MkParseError
     pos : Position
     rawError : RawParseError tok
+
+||| Pretty-print a parse error.
+export
+prettyParseError : Show tok => ParseError tok -> String
+prettyParseError err = fastConcat
+    [ "parse error at "
+    , show err.pos
+    , "\n"
+    , prettyRawParseError err.rawError
+    ]
 
 ||| A parser which returns a value of type `a`
 public export
@@ -73,7 +106,7 @@ record Parser tok a where
     result : Position -> Either (RawParseError tok) a
     next : Position -> tok -> Either (RawParseError tok) (Parser tok a)
 
-export covering
+public export covering
 Functor (Parser tok) where
     map f p = MkParser
         { result = \pos => f <$> p.result pos
@@ -94,7 +127,7 @@ alt p1 p2 = MkParser
         (Right p1', Right p2') => Right $ alt p1' p2'
     }
 
-export covering
+public export covering
 Applicative (Parser tok) where
     pure x = MkParser
         { result = \_ => Right x
@@ -113,7 +146,7 @@ Applicative (Parser tok) where
                     (Right pfx', Right px') => Right $ pfx' `alt` map f px' 
         }
 
-export covering
+public export covering
 Alternative (Parser tok) where
     empty = MkParser
         { result = \_ => Left $ Unexpected Nothing neutral
@@ -121,8 +154,8 @@ Alternative (Parser tok) where
         }
     (<|>) = alt
 
-export covering
-Show tok => Monad (Parser tok) where
+public export covering
+Monad (Parser tok) where
     px >>= f = MkParser
         { result = \pos =>
             case px.result pos of
