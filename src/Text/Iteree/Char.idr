@@ -72,7 +72,7 @@ toNatDigitH = \case
 ||| Parse a hexadecimal.
 export
 hexadecimal : Num a => Parser Char a
-hexadecimal = label "hex" $ foldl (\acc, d => acc * 16 + (assert_total $ toNatDigitH d)) 0 <$> takeWhile isHexDigit
+hexadecimal = label "hexadecimal" $ foldl (\acc, d => acc * 16 + (assert_total $ toNatDigitH d)) 0 <$> takeWhile isHexDigit
 
 ||| Parse a signed integer.
 export

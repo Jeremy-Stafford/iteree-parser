@@ -60,6 +60,18 @@ nonEmpty p = MkParser
     , next = p.next
     }
 
+||| Give a parser the ability to accept empty input.
+||| 
+||| Laws:
+||| 
+||| ```idris example
+||| nonEmpty (optional p) = map Just p
+||| optional (nonEmpty p) = pure Nothing <|> map Just p 
+||| ```
+export
+optional : Parser tok a -> Parser tok (Maybe a)
+optional p = map Just p <|> pure Nothing
+
 mutual
     ||| Parse any number of occurances of `p`.
     ||| @ p parser to repeat
@@ -77,10 +89,39 @@ export
 some1 : (p : Parser tok a) -> {auto 0 prf : NonEmpty p} -> Parser tok (List1 a)
 some1 p = [| p ::: many p |]
 
-export
 ||| Run `p` between `left` and `right`.
+export
 between : (left : Parser tok _) -> (right : Parser tok _) -> (p : Parser tok a) -> Parser tok a
 between left right p = left *> p <* right
+
+||| Skip any number of occurences of the first parser, then parse the second.
+|||
+||| For a version which skips exactly one occurence, use `(*>)`.
+export
+skip : (ignore : Parser tok _) -> {auto 0 prf : NonEmpty ignore} -> Parser tok a -> Parser tok a
+skip ignore p = many ignore *> p
+
+export
+skipIsNonEmpty : {auto 0 prf1 : NonEmpty ignore} -> {auto 0 prf2 : NonEmpty p} -> NonEmpty (skip ignore {prf = prf1} p)
+skipIsNonEmpty = IsNonEmpty \_ => ItIsLeft
+
+||| Parse at least one occurence of `item`, seperated by `sep`.
+export
+sepBy1 :
+    (item : Parser tok a) ->
+    (sep : Parser tok _) ->
+    {auto 0 prf : Either (NonEmpty item) (NonEmpty sep)} ->
+    Parser tok (List a)
+sepBy1 item sep = (::) <$> item <*> (pure [] <|> sep *> sepBy1 item sep)
+
+||| Parse any number of occurences of `item`, seperated by `sep`.
+export
+sepBy :
+    (item : Parser tok a) ->
+    (sep : Parser tok _) ->
+    {auto 0 prf : Either (NonEmpty item) (NonEmpty sep)} ->
+    Parser tok (List a)
+sepBy item sep = pure [] <|> sepBy1 item sep
 
 {-
 ===============================================================================
@@ -97,6 +138,11 @@ token pred = MkParser
         then Right $ pure t
         else Left $ Unexpected (Just t) neutral
     }
+
+||| A proof that any parser built with `token` is non-empty.
+export
+tokenIsNonEmpty : NonEmpty (token pred)
+tokenIsNonEmpty = IsNonEmpty \_ => ItIsLeft
 
 ||| Parse a single token.
 export
@@ -118,17 +164,11 @@ export
 takeWhile1 : (pred : tok -> Bool) -> Parser tok (List tok)
 takeWhile1 pred = nonEmpty $ takeWhile pred
 
-||| Optionally run a parser.
-export
-optional : Parser tok a -> Parser tok (Maybe a)
-optional p = Just <$> p <|> pure Nothing
-
 {-
 ===============================================================================
 Lexers
 ===============================================================================
 -}
-
 
 lex : Show tok2 => Parser tok1 tok2 -> Parser tok2 a -> Parser tok1 a
 lex lexer parser = MkParser
