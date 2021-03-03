@@ -4,16 +4,26 @@ import Language.JSON.Data
 import Text.Iteree
 import Text.Iteree.Char
 
-quotedString : Parser Char String
-quotedString = fastPack <$> between (char '"') (char '"') (takeWhile (/= '"'))
+lexeme : Parser Char a -> Parser Char a
+lexeme = skip (token isSpace)
 
+symbol : String -> Parser Char String
+symbol = lexeme . string
+
+quotedString : Parser Char String
+quotedString = lexeme $ fastPack <$> between (char '"') (char '"') (takeWhile (/= '"'))
 
 bool : Parser Char Bool
-bool = True <$ string "true" <|> False <$ string "false"
+bool = True <$ symbol "true" <|> False <$ symbol "false"
 
-pJson : Parser Char JSON
-pJson = JNull <$ string "null"
-    <|> JBoolean <$> bool
+mutual
+    array : Parser Char (List JSON)
+    array = between (symbol "[") (symbol "]") $ json `sepBy` symbol ","
+
+    json : Parser Char JSON
+    json = JNull <$ string "null"
+        <|> JBoolean <$> bool
+        <|> JArray <$> array
 
 
 source : String
@@ -21,7 +31,7 @@ source = "ADSSDA"
 
 main : IO ()
 main = do
-    let Right json = runParserString pJson source
-        | Left err => putStrLn "error"
-    printLn json
+    let Right res = runParserString json source
+        | Left err => putStrLn $ prettyParseError err
+    printLn res
 
